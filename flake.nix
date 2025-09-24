@@ -4,9 +4,13 @@
   inputs = {
     nixpkgs.url     = "github:NixOS/nixpkgs/nixos-unstable";
     flake-utils.url = "github:numtide/flake-utils";
+    namcore = {
+      url = "github:BugsAplenty/NeuralAmpModelerCore";
+      flake = false;
+    };
   };
 
-  outputs = { self, nixpkgs, flake-utils, ... }:
+  outputs = { self, nixpkgs, flake-utils, namcore, ... }:
     flake-utils.lib.eachDefaultSystem (system:
       let
         pkgs = import nixpkgs {
@@ -21,18 +25,23 @@
           version = "1.0.0";
           src = ./.;
 
-          nativeBuildInputs = [ pkgs.cmake pkgs.pkg-config ];
+          nativeBuildInputs = [ 
+            pkgs.cmake 
+            pkgs.pkg-config 
+            pkgs.eigen
+            pkgs.nlohmann_json
+          ];
           buildInputs       = [ pkgs.libsndfile ];
 
           # CMake builder runs from its build dir; after build, the executable is ./NamReamp
-          cmakeFlags = [ "-DCMAKE_BUILD_TYPE=Release" ];
+          cmakeFlags = [
+            "-DCMAKE_BUILD_TYPE=Release"
+            "-DNAMCORE=${namcore}"   # <-- pass the input to CMake
+          ];
 
           installPhase = ''
-            runHook preInstall
             mkdir -p $out/bin
-            # current dir is the CMake build dir (thanks to cmake setup hook)
             install -m755 NamReamp $out/bin/nam-reamp
-            runHook postInstall
           '';
         };
 
